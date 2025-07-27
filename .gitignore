@@ -1,3 +1,9 @@
+<<<<<<< HEAD
 venv/ 
 __pycache__/ 
 *.pyc 
+=======
+venv/
+__pycache__/
+*.pyc
+>>>>>>> 564ea535d1c4cb7a19e776fa7ac470369676ba4e
