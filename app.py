@@ -15,6 +15,10 @@ with app.app_context():
 def home():
     return "🎉 Welcome to the Event Manager API!"
 
+
+
+
+
 # ------------------ EVENTS ------------------
 
 

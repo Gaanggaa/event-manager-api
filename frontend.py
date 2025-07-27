@@ -1,5 +1,5 @@
 import streamlit as st
-import requests
+import requests 
 from datetime import date
 
 API_URL = "http://localhost:5000"
