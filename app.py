@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from models import db, Event, Attendee
+from datetime import datetime
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
@@ -16,31 +17,37 @@ def home():
 
 # ------------------ EVENTS ------------------
 
+
+
+# GET all events
 @app.route('/events', methods=['GET'])
 def get_events():
     events = Event.query.all()
-    return jsonify([
-        {'id': e.id, 'name': e.name, 'location': e.location, 'date': e.date}
-        for e in events
-    ])
-
-@app.route('/events/<int:id>', methods=['GET'])
-def get_event(id):
-    event = Event.query.get_or_404(id)
-    return jsonify({
-        'id': event.id,
-        'name': event.name,
-        'location': event.location,
-        'date': event.date
-    })
+    result = []
+    for event in events:
+        result.append({
+            "id": event.id,
+            "name": event.name,
+            "location": event.location,
+            "date": event.date.strftime("%Y-%m-%d")
+        })
+    return jsonify(result)
 
 @app.route('/events', methods=['POST'])
 def create_event():
     data = request.get_json()
-    new_event = Event(name=data['name'], location=data['location'], date=data['date'])
-    db.session.add(new_event)
-    db.session.commit()
-    return jsonify({'message': 'Event created successfully'}), 201
+    try:
+        new_event = Event(
+            name=data['name'],
+            location=data['location'],
+            date=datetime.strptime(data['date'], "%Y-%m-%d").date()
+        )
+        db.session.add(new_event)
+        db.session.commit()
+        return jsonify({"message": "Event created successfully"}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    
 
 @app.route('/events/<int:id>', methods=['PUT'])
 def update_event(id):
@@ -61,28 +68,53 @@ def delete_event(id):
 
 # ------------------ ATTENDEES ------------------
 
-@app.route('/events/<int:event_id>/attendees', methods=['POST'])
-def add_attendee(event_id):
+@app.route('/attendees', methods=['POST'])
+def create_attendee():
     data = request.get_json()
-    new_attendee = Attendee(name=data['name'], email=data['email'], event_id=event_id)
-    db.session.add(new_attendee)
-    db.session.commit()
-    return jsonify({'message': 'Attendee registered'}), 201
+    try:
+        new_attendee = Attendee(
+            name=data['name'],
+            email=data['email'],
+            event_id=data['event_id']
+        )
+        db.session.add(new_attendee)
+        db.session.commit()
+        return jsonify({"message": "Attendee created successfully"}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
-@app.route('/events/<int:event_id>/attendees', methods=['GET'])
-def get_attendees(event_id):
-    attendees = Attendee.query.filter_by(event_id=event_id).all()
-    return jsonify([
-        {'id': a.id, 'name': a.name, 'email': a.email}
-        for a in attendees
-    ])
+@app.route('/attendees', methods=['GET'])
+def get_attendees():
+    event_id = request.args.get('event_id')
+    if event_id:
+        attendees = Attendee.query.filter_by(event_id=event_id).all()
+    else:
+        attendees = Attendee.query.all()
+    result = []
+    for attendee in attendees:
+        result.append({
+            "id": attendee.id,
+            "name": attendee.name,
+            "email": attendee.email,
+            "event_id": attendee.event_id
+        })
+    return jsonify(result)
+@app.route('/attendees/<int:id>', methods=['PUT'])
+def update_attendee(id):
+    data = request.get_json()
+    attendee = Attendee.query.get_or_404(id)
+    attendee.name = data.get('name', attendee.name)
+    attendee.email = data.get('email', attendee.email)
+    attendee.event_id = data.get('event_id', attendee.event_id)
+    db.session.commit()
+    return jsonify({"message": "Attendee updated successfully"})
 
 @app.route('/attendees/<int:id>', methods=['DELETE'])
 def delete_attendee(id):
     attendee = Attendee.query.get_or_404(id)
     db.session.delete(attendee)
     db.session.commit()
-    return jsonify({'message': 'Attendee deleted'})
+    return jsonify({"message": "Attendee deleted successfully"})
     
 if __name__ == '__main__':
     app.run(debug=True)
